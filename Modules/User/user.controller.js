@@ -1,0 +1,382 @@
+import { userModel } from "../../Database/Models/user.model.js";
+import { AppError } from "../../Utils/Error/AppError.js";
+import { catchAsync } from "../../Utils/Error/catchAsync.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { sendEmail } from "../../Utils/Email/sendEmail.js";
+import { redisClient } from "../../Database/redisConnection.js";
+// import { OAuth2Client } from "google-auth-library";
+
+// const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const register = catchAsync(async (req, res, next) => {
+  const newUser = await userModel.create(req.body);
+  await sendEmail(newUser, "Verify your account.", "verify");
+
+  const token = newUser.generateToken();
+
+  newUser.password = undefined;
+  res.status(201).json({
+    success: true,
+    message: "A Verification email has been sent to your email.",
+    data: newUser,
+    token, // Return token so user can verify immediately
+  });
+});
+
+const login = catchAsync(async (req, res, next) => {
+  const foundUser = await userModel
+    .findOne({ email: req.body.email, isDeleted: false })
+    .select("+password");
+
+  if (!foundUser) {
+    //fake compare to keep response time identical
+    await bcrypt.compare(req.body.password, req.body.email);
+    return next(new AppError("Invalid Email or Password", 401));
+  }
+
+  if (!foundUser.isVerified) {
+    return next(new AppError("Please Confirm Your Email First", 401));
+  }
+
+  const match = await bcrypt.compare(req.body.password, foundUser.password);
+  if (match) {
+    const token = foundUser.generateToken();
+
+    const refreshToken = foundUser.generateRefreshToken();
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // Merge guest cart if sessionId provided
+    // const sessionId = req.body.sessionId || req.headers["x-session-id"];
+    // if (sessionId) {
+    //   await mergeGuestCart(foundUser._id, sessionId);
+    // }
+
+    res.json({ success: true, data: token });
+  } else {
+    return next(new AppError("Email or Password Invalid", 401));
+  }
+});
+
+const verifyEmail = catchAsync(async (req, res, next) => {
+  const { otp } = req.body;
+  const email = req.user?.email ?? req.body.email;
+  if (!email) return next(new AppError("Email is required", 400));
+  if (!otp) return next(new AppError("OTP is required", 400));
+
+  const storedOtp = await redisClient.get(`verify:${email}`);
+
+  if (String(otp) !== String(storedOtp)) {
+    return next(new AppError("Invalid or Expired OTP", 401));
+  }
+
+  let userId = req.user?._id;
+  if (!userId) {
+    const user = await userModel.findOne({ email });
+    if (!user) return next(new AppError("User not found", 404));
+    userId = user._id;
+  }
+
+  const updatedUser = await userModel.findByIdAndUpdate(
+    userId,
+    { isVerified: true },
+    { new: true },
+  );
+
+  if (!updatedUser) {
+    return next(new AppError("User not found or update failed", 404));
+  }
+
+  await redisClient.del(`verify:${email}`);
+
+  return res.json({
+    success: true,
+    message: "Your account has been verified",
+  });
+});
+
+const refresh = catchAsync(async (req, res, next) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return next(new AppError("Access Denied", 401));
+
+  const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+  const user = await userModel.findById(decoded._id);
+  if (!user || user.isDeleted) {
+    return next(new AppError("User not found or deleted", 401));
+  }
+
+  const newAccessToken = user.generateToken();
+
+  res.json({ success: true, data: newAccessToken });
+});
+
+// auth.routes.js
+
+const logout = catchAsync(async (req, res, next) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) return next(new AppError("Access Denied.", 401));
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  });
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully. See ya!",
+  });
+});
+
+const resendVerification = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+
+  if (!email) return next(new AppError("Email is required", 400));
+
+  const user = await userModel.findOne({ email });
+  if (!user) return next(new AppError("User not found", 404));
+
+  if (user.isVerified)
+    return next(new AppError("User is already verified", 400));
+
+  const existingOtp = await redisClient.get(`verify:${email}`);
+  if (existingOtp)
+    return next(new AppError("Please wait before requesting a new OTP", 429));
+
+  await sendEmail(user, "Verify your account.", "verify");
+
+  return res.status(200).json({
+    success: true,
+    message: "Verification email resent successfully",
+  });
+});
+
+
+const forgotPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return next(new AppError("Need Valid Email.", 400));
+  const user = await userModel.findOne({ email, isDeleted: false });
+
+  // Always return the same response to prevent user enumeration
+  if (!user) {
+    return res.json({
+      success: true,
+      message: "If an account exists, an email has been sent with the OTP.",
+    });
+  }
+
+  await sendEmail(user, "Password Reset Code", "reset");
+
+  return res.json({
+    success: true,
+    message: "If an account exists, an email has been sent with the OTP.",
+  });
+});
+
+const resetPassword = catchAsync(async (req, res, next) => {
+  const { email, otp, newPassword } = req.body;
+
+  const user = await userModel.findOne({ email, isDeleted: false });
+  if (!user) return next(new AppError("Invalid or expired OTP", 401));
+
+  const storedOtp = await redisClient.get(`reset:${email}`);
+  if (!storedOtp || String(otp) !== String(storedOtp)) {
+    return next(new AppError("Invalid or expired OTP", 401));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  await redisClient.del(`reset:${email}`);
+
+  return res.status(200).json({
+    success: true,
+    message: "Password reset successfully. You can now log in.",
+  });
+});
+
+const changePassword = catchAsync(async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const user = await userModel.findById(req.user._id).select("+password");
+  if (!user) return next(new AppError("User not found", 404));
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    return next(new AppError("Current password is incorrect", 401));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Password changed successfully",
+  });
+});
+
+const getProfile = catchAsync(async (req, res, next) => {
+  const user = await userModel
+    .findById(req.user._id);
+
+  // .populate("wishlist", "name price images");
+
+  if (!user) return next(new AppError("User not found", 404));
+
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+});
+
+const updateProfile = catchAsync(async (req, res, next) => {
+  const allowedFields = ["name", "phone"];
+  const updates = {};
+  for (const key of allowedFields) {
+    if (req.body[key] !== undefined) {
+      updates[key] = req.body[key];
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return next(new AppError("No valid fields to update", 400));
+  }
+
+  const user = await userModel.findByIdAndUpdate(req.user._id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!user) return next(new AppError("User not found", 404));
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: user,
+  });
+});
+
+// const addToWishlist = catchAsync(async (req, res, next) => {
+//   const { productId } = req.params;
+
+//   const product = await productModel.findById(productId);
+//   if (!product) return next(new AppError("Product not found", 404));
+
+//   const user = await userModel
+//     .findByIdAndUpdate(
+//       req.user._id,
+//       { $addToSet: { wishlist: productId } },
+//       { new: true },
+//     )
+//     .populate("wishlist", "name price images");
+
+//   res.status(200).json({
+//     success: true,
+//     message: "Product added to wishlist",
+//     data: user.wishlist,
+//   });
+// });
+
+// const removeFromWishlist = catchAsync(async (req, res, next) => {
+//   const { productId } = req.params;
+
+//   const user = await userModel
+//     .findByIdAndUpdate(
+//       req.user._id,
+//       { $pull: { wishlist: productId } },
+//       { new: true },
+//     )
+//     .populate("wishlist", "name price images");
+
+//   if (!user) return next(new AppError("User not found", 404));
+
+//   res.status(200).json({
+//     success: true,
+//     message: "Product removed from wishlist",
+//     data: user.wishlist,
+//   });
+// });
+
+// google login logic
+
+// const googleLogin = catchAsync(async (req, res, next) => {
+//   const { idToken } = req.body;
+
+//   // Verify the Google ID token
+//   let ticket;
+//   try {
+//     ticket = await googleClient.verifyIdToken({
+//       idToken,
+//       audience: process.env.GOOGLE_CLIENT_ID,
+//     });
+//   } catch {
+//     return next(new AppError("Invalid Google token", 401));
+//   }
+
+//   const { sub: googleId, email, name } = ticket.getPayload();
+
+//   // Find existing user by googleId or email
+//   let user = await userModel.findOne({
+//     $or: [{ googleId }, { email }],
+//     isDeleted: false,
+//   });
+
+//   if (user) {
+//     // Link Google account if user registered with email/password but hasn't linked yet
+//     if (!user.googleId) {
+//       user.googleId = googleId;
+//       user.authProvider = "google";
+//       await user.save({ validateModifiedOnly: true });
+//     }
+//   } else {
+//     // Create new user — Google users are auto-verified, no password needed
+//     user = await userModel.create({
+//       name,
+//       email,
+//       googleId,
+//       authProvider: "google",
+//       isVerified: true,
+//     });
+//   }
+
+//   const token = user.generateToken();
+//   const refreshToken = user.generateRefreshToken();
+
+//   res.cookie("refreshToken", refreshToken, {
+//     httpOnly: true,
+//     secure: true,
+//     sameSite: "none",
+//     maxAge: 7 * 24 * 60 * 60 * 1000,
+//   });
+
+  // Merge guest cart if sessionId provided
+//   const sessionId = req.body.sessionId || req.headers["x-session-id"];
+//   if (sessionId) {
+//     await mergeGuestCart(user._id, sessionId);
+//   }
+
+//   res.json({ success: true, data: token });
+// });
+
+export {
+  register,
+  login,
+  // googleLogin,
+  verifyEmail,
+  refresh,
+  logout,
+  resendVerification,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  getProfile,
+  updateProfile,
+  // addToWishlist,
+  // removeFromWishlist,
+};
