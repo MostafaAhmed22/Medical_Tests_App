@@ -88,7 +88,7 @@ userSchema.methods.generateToken = function () {
       isDeleted: this.isDeleted,
     },
     accessSecret,
-    { expiresIn: "2h" },
+    { expiresIn: "365d" },
   );
 };
 
@@ -114,7 +114,7 @@ userSchema.methods.generateRefreshToken = function () {
     },
     refreshSecret,
     {
-      expiresIn: "7d",
+      expiresIn: "365d",
     },
   );
 
