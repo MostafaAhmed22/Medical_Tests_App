@@ -1,53 +1,40 @@
-
-import express from 'express';
 import mongoose from 'mongoose';
-import cors from 'cors';
 import "dotenv/config";
-import userRoutes from './Modules/User/user.routes.js';
 import { redisConnection } from './Database/redisConnection.js';
+import { createApp } from "./createApp.js";
+import { initLimiters } from "./Middlewares/rateLimiter.js";
 
-const app = express();
+const app = createApp();
 
-// ── Middleware ──
-app.use(cors());
-app.use(express.json());
-
-// ── Routes ──
-app.use(userRoutes);
-
-// ── Global Error Handler ──
-app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
-});
-
-// ── Bootstrap ──
+/**
+ * Bootstrap connections and start the server.
+ */
 const bootstrap = async () => {
   try {
+    // 1. Connect to MongoDB
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("Connected to MongoDB");
-  } catch (err) {
-    console.error("Error connecting to MongoDB:", err);
-  }
 
-  try {
+    // 2. Connect to Redis
     await redisConnection();
-  } catch (err) {
-    console.error("Redis connection failed:", err.message);
-  }
+    console.log("Connected to Redis");
 
-  // Only start listening if NOT in production or vercel environment
-  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    app.listen(3000, () => {
-      console.log('Server is running on port 3000');
-    });
+    // 3. Initialize rate limiters
+    initLimiters();
+    console.log("Rate limiters initialized");
+
+    // 4. Start listening (local only)
+    if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`Server is running locally on port ${PORT}`);
+      });
+    }
+  } catch (err) {
+    console.error("Bootstrap failed:", err.message);
   }
 };
 
 bootstrap();
 
-// CRITICAL FOR VERCEL
 export default app;
