@@ -4,6 +4,7 @@ import { orderModel } from "../../Database/Models/order.model.js";
 import { submissionModel } from "../../Database/Models/submission.model.js";
 import { catchAsync } from "../../Utils/Error/catchAsync.js";
 import { AppError } from "../../Utils/Error/AppError.js";
+import cloudinary from "../../Utils/Cloudinary/cloudinary.js";
 
 // Admin: Create a new test
 export const createTest = catchAsync(async (req, res, next) => {
@@ -12,6 +13,21 @@ export const createTest = catchAsync(async (req, res, next) => {
   // Verify category exists
   const categoryExists = await categoryModel.findById(category);
   if (!categoryExists) return next(new AppError("Category not found", 404));
+
+  // Handle Cloudinary image upload if file is provided
+  if (req.file) {
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: "medical_tests/covers" },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(req.file.buffer);
+    });
+    req.body.coverImage = uploadResult.secure_url;
+  }
 
   const test = await testModel.create(req.body);
 
@@ -62,6 +78,21 @@ export const updateTest = catchAsync(async (req, res, next) => {
   if (req.body.category) {
     const categoryExists = await categoryModel.findById(req.body.category);
     if (!categoryExists) return next(new AppError("Category not found", 404));
+  }
+
+  // Handle Cloudinary image upload if new file is provided
+  if (req.file) {
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: "medical_tests/covers" },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(req.file.buffer);
+    });
+    req.body.coverImage = uploadResult.secure_url;
   }
 
   const updatedTest = await testModel.findByIdAndUpdate(id, req.body, {

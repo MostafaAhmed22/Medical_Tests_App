@@ -18,6 +18,8 @@ import {
   submitTestValidation,
 } from "../../Validations/testValidation.js";
 
+import { uploadSingleImage } from "../../Utils/Cloudinary/multer.js";
+
 const testRoutes = express.Router();
 
 // Public routes
@@ -44,6 +46,7 @@ testRoutes.post(
   "/tests",
   verifyToken,
   isAdmin,
+  uploadSingleImage("coverImage"),
   validate(createTestValidation),
   createTest,
 );
@@ -52,6 +55,7 @@ testRoutes.put(
   "/tests/:id",
   verifyToken,
   isAdmin,
+  uploadSingleImage("coverImage"),
   validate(updateTestValidation),
   updateTest,
 );
