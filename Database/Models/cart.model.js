@@ -36,11 +36,6 @@ const cartSchema = new Schema(
       default: 0,
       min: [0, "Total price cannot be negative"],
     },
-    finalPrice: {
-      type: Number,
-      default: 0,
-      min: [0, "Final price cannot be negative"],
-    },
     isDeleted: {
       type: Boolean,
       default: false,
