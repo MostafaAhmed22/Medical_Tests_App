@@ -1,6 +1,8 @@
 import express from "express";
 import { globalErrorHandler } from "./Middlewares/globalErrorHandler.js";
 import userRoutes from "./Modules/User/user.routes.js";
+import categoryRoutes from "./Modules/Category/category.routes.js";
+import cartRoutes from "./Modules/Cart/cart.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { AppError } from "./Utils/Error/AppError.js";
@@ -79,6 +81,8 @@ export const createApp = () => {
 
   // Ensure all models are registered before routes
   app.use(userRoutes);
+  app.use(categoryRoutes);
+  app.use(cartRoutes);
 
   app.use((req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
