@@ -21,6 +21,19 @@ export const createApp = () => {
   // HTTPS enforcement (production only)
   app.use(enforceHttps);
 
+  // Ensure DB connection before processing requests (Serverless optimization)
+  app.use(async (req, res, next) => {
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await mongoose.connect(process.env.MONGODB_URI);
+        console.log("Connected to MongoDB on the fly");
+      } catch (err) {
+        console.error("MongoDB on-the-fly connection failed:", err.message);
+      }
+    }
+    next();
+  });
+
   const allowedOrigins = [
     process.env.CLIENT_URL,
     "http://localhost:5173",
