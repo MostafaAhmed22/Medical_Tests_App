@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // ── Routes ──
-app.use("/api/users", userRoutes);
+app.use(userRoutes);
 
 // ── Global Error Handler ──
 app.use((err, req, res, next) => {

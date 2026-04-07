@@ -28,7 +28,7 @@ export const sendEmail = async (user, subject, messageType) => {
         : "Use the following OTP to reset your password.";
 
     const mailOptions = {
-      from: `"E-Commerce" <${process.env.EMAIL}>`,
+      from: `"Medical Tests" <${process.env.EMAIL}>`,
       to: user.email,
       subject: subject,
       html: `
@@ -44,7 +44,7 @@ export const sendEmail = async (user, subject, messageType) => {
     await transporter.sendMail(mailOptions);
     return true;
   } catch (error) {
-    logger.error({ err: error, email: user.email }, "Failed to send email");
+    console.error("Failed to send email to:", user.email, error.message);
     return false;
   }
 };
