@@ -8,7 +8,7 @@ import { AppError } from "./Utils/Error/AppError.js";
 
 import { enforceHttps } from "./Middlewares/enforceHttps.js";
 import mongoose from "mongoose";
-import { redisClient } from "./Database/redisConnection.js";
+import { redisClient, redisConnection } from "./Database/redisConnection.js";
 
 
 /**
@@ -23,13 +23,20 @@ export const createApp = () => {
 
   // Ensure DB connection before processing requests (Serverless optimization)
   app.use(async (req, res, next) => {
-    if (mongoose.connection.readyState !== 1) {
-      try {
+    try {
+      // 1. Check MongoDB
+      if (mongoose.connection.readyState !== 1) {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log("Connected to MongoDB on the fly");
-      } catch (err) {
-        console.error("MongoDB on-the-fly connection failed:", err.message);
       }
+      
+      // 2. Check Redis
+      if (!redisClient.isOpen) {
+        await redisConnection();
+        console.log("Connected to Redis on the fly");
+      }
+    } catch (err) {
+      console.error("On-the-fly connection failed:", err.message);
     }
     next();
   });

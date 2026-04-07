@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import "dotenv/config";
 import otpGenerator from "otp-generator";
-import { redisClient } from "../../Database/redisConnection.js";
+import { redisClient, redisConnection } from "../../Database/redisConnection.js";
 
 export const sendEmail = async (user, subject, messageType) => {
   const transporter = nodemailer.createTransport({
@@ -18,6 +18,16 @@ export const sendEmail = async (user, subject, messageType) => {
       specialChars: false,
       lowerCaseAlphabets: false,
     });
+
+    // Ensure Redis is connected before we try to set the key
+    if (!redisClient.isOpen) {
+      console.log("Redis client was closed, reconnecting in sendEmail...");
+      try {
+        await redisConnection();
+      } catch (err) {
+        throw new Error("Could not reconnect to Redis for email: " + err.message);
+      }
+    }
 
     const redisKey = `${messageType}:${user.email}`;
     await redisClient.set(redisKey, otp, { EX: 300 });
