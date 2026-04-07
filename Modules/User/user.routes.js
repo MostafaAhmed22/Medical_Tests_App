@@ -24,29 +24,28 @@ import {
   // addToWishlist,
   // removeFromWishlist,
 } from "./user.controller.js";
-import { authLimiter } from "../../Middlewares/rateLimiter.js";
+
 
 const userRoutes = express.Router();
 
-userRoutes.post("/register", authLimiter, validate(userValidation), register);
-userRoutes.post("/login", authLimiter, login);
+userRoutes.post("/register", validate(userValidation), register);
+userRoutes.post("/login", login);
 // userRoutes.post(
 //   "/google-login",
 //   authLimiter,
 //   validate(googleLoginValidation),
 //   googleLogin,
 // );
-userRoutes.post("/logout", verifyToken, authLimiter, logout);
-userRoutes.post("/refresh", verifyToken, authLimiter, refresh);
-userRoutes.post("/verify-email", verifyToken, authLimiter, verifyEmail);
-userRoutes.post("/resend-verification", authLimiter, resendVerification);
+userRoutes.post("/logout", verifyToken, logout);
+userRoutes.post("/refresh", verifyToken, refresh);
+userRoutes.post("/verify-email", verifyToken, verifyEmail);
+userRoutes.post("/resend-verification", resendVerification);
 
 
 
-userRoutes.post("/forgot-password", authLimiter, forgotPassword);
+userRoutes.post("/forgot-password", forgotPassword);
 userRoutes.patch(
   "/reset-password",
-  authLimiter,
   validate(resetPasswordValidation),
   resetPassword,
 );

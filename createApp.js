@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import { AppError } from "./Utils/Error/AppError.js";
 
-import { globalLimiter, initLimiters } from "./Middlewares/rateLimiter.js";
+
 import { enforceHttps } from "./Middlewares/enforceHttps.js";
 import mongoose from "mongoose";
 import { redisClient } from "./Database/redisConnection.js";
@@ -48,7 +48,6 @@ export const createApp = () => {
   app.use(cookieParser());
 
   app.set("trust proxy", 1);
-  app.use(globalLimiter);
 
   // Root route
   app.get("/", (req, res) => {
