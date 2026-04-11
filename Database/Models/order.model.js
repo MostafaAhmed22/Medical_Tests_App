@@ -37,6 +37,7 @@ const orderSchema = new Schema(
     paymentMethod: {
       type: String,
       required: true,
+      default: "Card"
     },
     isPaid: {
       type: Boolean,
