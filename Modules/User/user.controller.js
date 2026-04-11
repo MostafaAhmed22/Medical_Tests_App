@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../Utils/Email/sendEmail.js";
 import { redisClient } from "../../Database/redisConnection.js";
+import { mergeGuestCart } from "../Cart/cart.controller.js";
 // import { OAuth2Client } from "google-auth-library";
 
 // const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -52,10 +53,10 @@ const login = catchAsync(async (req, res, next) => {
     });
 
     // Merge guest cart if sessionId provided
-    // const sessionId = req.body.sessionId || req.headers["x-session-id"];
-    // if (sessionId) {
-    //   await mergeGuestCart(foundUser._id, sessionId);
-    // }
+    const sessionId = req.body.sessionId || req.headers["x-session-id"];
+    if (sessionId) {
+      await mergeGuestCart(foundUser._id, sessionId);
+    }
 
     res.json({ success: true, data: token });
   } else {
