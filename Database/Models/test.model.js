@@ -1,25 +1,25 @@
 import mongoose from "mongoose";
 
-const questionSchema = new mongoose.Schema({
-  questionText: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  options: [
-    {
-      text: {
-        type: String,
-        required: true,
-      },
-      points: {
-        type: Number,
-        required: true,
-        default: 0,
-      },
-    },
-  ],
-});
+// const questionSchema = new mongoose.Schema({
+//   questionText: {
+//     type: String,
+//     required: true,
+//     trim: true,
+//   },
+//   options: [
+//     {
+//       text: {
+//         type: String,
+//         required: true,
+//       },
+//       points: {
+//         type: Number,
+//         required: true,
+//         default: 0,
+//       },
+//     },
+//   ],
+// });
 
 const testSchema = new mongoose.Schema(
   {
@@ -42,10 +42,10 @@ const testSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    duration: {
-      type: Number, // in minutes
-      required: true,
-    },
+    // duration: {
+    //   type: Number, // in minutes
+    //   required: true,
+    // },
     coverImage: {
       type: String,
       default: null,
@@ -54,31 +54,31 @@ const testSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    maxScore: {
-      type: Number,
-      required: true,
-    },
-    questions: [questionSchema],
-    interpretations: [
-      {
-        label: {
-          type: String,
-          required: true, // e.g. "Severe Anxiety"
-        },
-        minScore: {
-          type: Number,
-          required: true,
-        },
-        maxScore: {
-          type: Number,
-          required: true,
-        },
-        description: {
-          type: String,
-          required: true, // full explanation shown to user after test
-        },
-      },
-    ],
+    // maxScore: {
+    //   type: Number,
+    //   required: true,
+    // },
+    // questions: [questionSchema],
+    // interpretations: [
+    //   {
+    //     label: {
+    //       type: String,
+    //       required: true, // e.g. "Severe Anxiety"
+    //     },
+    //     minScore: {
+    //       type: Number,
+    //       required: true,
+    //     },
+    //     maxScore: {
+    //       type: Number,
+    //       required: true,
+    //     },
+    //     description: {
+    //       type: String,
+    //       required: true, // full explanation shown to user after test
+    //     },
+    //   },
+    // ],
     isPublished: {
       type: Boolean,
       default: false,

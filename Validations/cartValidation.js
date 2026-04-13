@@ -7,5 +7,5 @@ export const addToCartValidation = joi.object({
     "string.hex": "Test ID must be a valid hex string",
     "string.length": "Test ID must be 24 characters long",
   }),
-  sessionId: joi.string().optional(),
+  // sessionId: joi.string().optional(), // Disabled for guests
 });

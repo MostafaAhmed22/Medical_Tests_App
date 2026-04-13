@@ -9,9 +9,9 @@ import {
   getUserOrders,
   getOrderById,
   cancelOrder,
-  // updatePaidStatus,
-  createPaymentIntent,
-  confirmPayment,
+  updatePaidStatus,
+  // createPaymentIntent,
+  // confirmPayment,
 } from "./order.controller.js";
 import { validate } from "../../Middlewares/validate.js";
 
@@ -37,13 +37,13 @@ orderRoutes.put(
   isAuthor(orderModel, "order"),
   cancelOrder,
 );
-orderRoutes.post("/orders/:id/pay-intent", verifyToken, isAuthor(orderModel, "order"), createPaymentIntent);
-orderRoutes.post("/orders/:id/confirm-payment", verifyToken, isAuthor(orderModel, "order"), confirmPayment);
-// orderRoutes.put(
-//   "/orders/:id/pay",
-//   verifyToken,
-//   isAuthor(orderModel, "order"),
-//   updatePaidStatus,
-// );
+// orderRoutes.post("/orders/:id/pay-intent", verifyToken, isAuthor(orderModel, "order"), createPaymentIntent);
+// orderRoutes.post("/orders/:id/confirm-payment", verifyToken, isAuthor(orderModel, "order"), confirmPayment);
+orderRoutes.put(
+  "/orders/:id/pay",
+  verifyToken,
+  isAuthor(orderModel, "order"),
+  updatePaidStatus,
+);
 
 export default orderRoutes;

@@ -6,18 +6,18 @@ import { AppError } from "../../Utils/Error/AppError.js";
 // --- Helpers ---
 
 /**
- * Gets identifying information for the cart (userId for logged in, sessionId for guests)
+ * Gets identifying information for the cart (userId for logged in users only)
  */
 const getCartIdentifier = (req) => {
   const userId = req.user?._id || null;
-  const sessionId = !userId
-    ? req.body?.sessionId || req.headers["x-session-id"] || null
-    : null;
+  // const sessionId = !userId
+  //   ? req.body?.sessionId || req.headers["x-session-id"] || null
+  //   : null;
+  const sessionId = null; // Disabled guest carts
   return { userId, sessionId };
 };
 
-
-// Finds an active cart based on userId or sessionId    
+// Finds an active cart based on userId or sessionId
 const findCart = (userId, sessionId) => {
   if (!userId && !sessionId) return null;
   const query = userId
@@ -49,6 +49,7 @@ export const addToCart = catchAsync(async (req, res, next) => {
   const { testId } = req.body;
   const { userId, sessionId } = getCartIdentifier(req);
 
+  if (!userId) return next(new AppError("Authentication required", 401));
   if (!testId) return next(new AppError("Test ID is required", 400));
 
   const test = await testModel.findById(testId);
@@ -59,7 +60,7 @@ export const addToCart = catchAsync(async (req, res, next) => {
   if (!cart) {
     cart = await cartModel.create({
       userId,
-      sessionId,
+      // sessionId, // Disabled for guests
       items: [{ testId }],
     });
   } else {
@@ -91,6 +92,8 @@ export const addToCart = catchAsync(async (req, res, next) => {
 export const getCart = catchAsync(async (req, res, next) => {
   const { userId, sessionId } = getCartIdentifier(req);
 
+  if (!userId) return next(new AppError("Authentication required", 401));
+
   const cart = await findCart(userId, sessionId);
 
   if (!cart) {
@@ -115,6 +118,8 @@ export const getCart = catchAsync(async (req, res, next) => {
 export const removeFromCart = catchAsync(async (req, res, next) => {
   const { testId } = req.params;
   const { userId, sessionId } = getCartIdentifier(req);
+
+  if (!userId) return next(new AppError("Authentication required", 401));
 
   const cart = await findCart(userId, sessionId);
   if (!cart) return next(new AppError("Cart not found", 404));
@@ -143,6 +148,8 @@ export const removeFromCart = catchAsync(async (req, res, next) => {
 export const clearCart = catchAsync(async (req, res, next) => {
   const { userId, sessionId } = getCartIdentifier(req);
 
+  if (!userId) return next(new AppError("Authentication required", 401));
+
   const cart = await findCart(userId, sessionId);
   if (!cart) return next(new AppError("Cart not found", 404));
 
@@ -156,42 +163,41 @@ export const clearCart = catchAsync(async (req, res, next) => {
 });
 
 /**
- * Merges guest cart into user cart (usually called after login)
+ * Merges guest cart into user cart (usually called after login) - DISABLED
  */
-export const mergeGuestCart = async (userId, sessionId) => {
-  if (!sessionId) return;
+// export const mergeGuestCart = async (userId, sessionId) => {
+//   if (!sessionId) return;
 
-  const guestCart = await cartModel.findOne({ sessionId, isDeleted: false });
-  if (!guestCart) return;
+//   const guestCart = await cartModel.findOne({ sessionId, isDeleted: false });
+//   if (!guestCart) return;
 
-  let userCart = await cartModel.findOne({ userId, isDeleted: false });
+//   let userCart = await cartModel.findOne({ userId, isDeleted: false });
 
-  if (userCart) {
-    for (const guestItem of guestCart.items) {
-      if (guestItem.isDeleted) continue;
+//   if (userCart) {
+//     for (const guestItem of guestCart.items) {
+//       if (guestItem.isDeleted) continue;
 
-      const existingInUserCart = userCart.items.find(
-        (item) =>
-          item.testId.toString() === guestItem.testId.toString() &&
-          !item.isDeleted,
-      );
+//       const existingInUserCart = userCart.items.find(
+//         (item) =>
+//           item.testId.toString() === guestItem.testId.toString() &&
+//           !item.isDeleted,
+//       );
 
-      if (!existingInUserCart) {
-        userCart.items.push({ testId: guestItem.testId });
-      }
-    }
+//       if (!existingInUserCart) {
+//         userCart.items.push({ testId: guestItem.testId });
+//       }
+//     }
 
-    await recalcCart(userCart);
-    await userCart.save();
+//     await recalcCart(userCart);
+//     await userCart.save();
 
-    // Soft delete the guest cart after merging
-    guestCart.isDeleted = true;
-    await guestCart.save();
-  } else {
-    // Convert guest cart to user cart
-    guestCart.userId = userId;
-    guestCart.sessionId = null;
-    await guestCart.save();
-  }
-};
-
+//     // Soft delete the guest cart after merging
+//     guestCart.isDeleted = true;
+//     await guestCart.save();
+//   } else {
+//     // Convert guest cart to user cart
+//     guestCart.userId = userId;
+//     guestCart.sessionId = null;
+//     await guestCart.save();
+//   }
+// };
