@@ -3,6 +3,7 @@ import { globalErrorHandler } from "./Middlewares/globalErrorHandler.js";
 import userRoutes from "./Modules/User/user.routes.js";
 import categoryRoutes from "./Modules/Category/category.routes.js";
 import cartRoutes from "./Modules/Cart/cart.routes.js";
+import orderRoutes from "./Modules/Order/order.routes.js";
 import testRoutes from "./Modules/Test/test.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -84,6 +85,7 @@ export const createApp = () => {
   app.use(userRoutes);
   app.use(categoryRoutes);
   app.use(cartRoutes);
+  app.use(orderRoutes);
   app.use(testRoutes);
 
   app.use((req, res, next) => {
