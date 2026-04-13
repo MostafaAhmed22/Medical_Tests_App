@@ -4,11 +4,9 @@ import { AppError } from "../../Utils/Error/AppError.js";
 import { testModel } from "../../Database/Models/test.model.js";
 import { cartModel } from "../../Database/Models/cart.model.js";
 import { userModel } from "../../Database/Models/user.model.js";
-import Stripe from "stripe";
 
-// const stripe = process.env.STRIPE_SECRET_KEY
-//   ? new Stripe(process.env.STRIPE_SECRET_KEY)
-//   : null;
+// Stripe is not installed in this project; payment routes are disabled.
+const stripe = null;
 
 const getUserOrders = catchAsync(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
@@ -57,8 +55,7 @@ const getOrderById = catchAsync(async (req, res, next) => {
 
 const addOrder = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
-  const { cartId} = req.body;
-
+  const { cartId } = req.body;
 
   // Find cart and validate
   const cart = await cartModel.findById(cartId).populate("items.testId");
@@ -130,7 +127,6 @@ const addOrder = catchAsync(async (req, res, next) => {
     status: "Pending",
   });
 
-
   // soft-delete the cart (can be restored if payment fails)
   cart.isDeleted = true;
   await cart.save();
@@ -162,10 +158,7 @@ const cancelOrder = catchAsync(async (req, res, next) => {
 
   if (!cancellableStatuses.includes(order.status)) {
     return next(
-      new AppError(
-        `Cannot cancel order with status: ${order.status}.`,
-        400,
-      ),
+      new AppError(`Cannot cancel order with status: ${order.status}.`, 400),
     );
   }
 
@@ -182,7 +175,6 @@ const cancelOrder = catchAsync(async (req, res, next) => {
       new: true,
     },
   );
-
 
   // restore the soft-deleted cart so user can retry
   if (order.cartId) {
@@ -237,7 +229,6 @@ const updatePaidStatus = catchAsync(async (req, res, next) => {
     data: updatedOrder,
   });
 });
-
 
 // const createPaymentIntent = catchAsync(async (req, res, next) => {
 //   const userId = req.user._id;
