@@ -3,6 +3,7 @@
 Base URL: `{{base_url}}` (e.g. `http://localhost:3000`)
 
 Common headers:
+
 - `Content-Type: application/json`
 - `Authorization: Bearer {{token}}` for authenticated endpoints
 
@@ -11,6 +12,7 @@ Common headers:
 ## Public Endpoints
 
 ### Health / Root
+
 - `GET /`
 - Description: API health check
 - Auth: none
@@ -18,6 +20,7 @@ Common headers:
 - Response: status + message
 
 ### Register
+
 - `POST /register`
 - Description: Create a new user account and send verification email
 - Auth: none
@@ -29,6 +32,7 @@ Common headers:
 - Response: new user data and token
 
 ### Login
+
 - `POST /login`
 - Description: Authenticate user and return JWT
 - Auth: none
@@ -38,6 +42,7 @@ Common headers:
 - Response: token
 
 ### Resend verification
+
 - `POST /resend-verification`
 - Description: Resend email verification OTP
 - Auth: none
@@ -46,6 +51,7 @@ Common headers:
 - Response: success message
 
 ### Forgot password
+
 - `POST /forgot-password`
 - Description: Request password reset OTP
 - Auth: none
@@ -54,6 +60,7 @@ Common headers:
 - Response: success message
 
 ### Reset password
+
 - `PATCH /reset-password`
 - Description: Change password using OTP
 - Auth: none
@@ -64,12 +71,14 @@ Common headers:
 - Response: success message
 
 ### List categories
+
 - `GET /categories`
 - Description: Get all categories
 - Auth: none
 - Response: array of categories
 
 ### Get category by ID
+
 - `GET /categories/:id`
 - Description: Get category details by ID
 - Auth: none
@@ -78,6 +87,7 @@ Common headers:
 - Response: category object
 
 ### List tests
+
 - `GET /tests`
 - Description: Get published tests, optionally filter by category
 - Auth: none
@@ -86,6 +96,7 @@ Common headers:
 - Response: list of tests
 
 ### Get test by ID
+
 - `GET /tests/:id`
 - Description: Get test details by ID
 - Auth: none
@@ -98,18 +109,21 @@ Common headers:
 ## Authenticated User Endpoints
 
 ### Logout
+
 - `POST /logout`
 - Description: Logout current user
 - Auth: Bearer token
 - Response: success message
 
 ### Refresh token
+
 - `POST /refresh`
 - Description: Refresh JWT using refresh token cookie
 - Auth: Bearer token
 - Response: refreshed token
 
 ### Verify email
+
 - `POST /verify-email`
 - Description: Verify user email with OTP
 - Auth: Bearer token
@@ -118,6 +132,7 @@ Common headers:
 - Response: success message
 
 ### Change password
+
 - `PATCH /change-password`
 - Description: Change password for authenticated user
 - Auth: Bearer token
@@ -127,12 +142,14 @@ Common headers:
 - Response: success message
 
 ### Get profile
+
 - `GET /me`
 - Description: Get current authenticated user profile
 - Auth: Bearer token
 - Response: user details
 
 ### Update profile
+
 - `PATCH /update-profile`
 - Description: Update profile fields
 - Auth: Bearer token
@@ -142,12 +159,14 @@ Common headers:
 - Response: updated user
 
 ### View cart
+
 - `GET /cart`
 - Description: Get current authenticated user cart
 - Auth: Bearer token
 - Response: cart object
 
 ### Add test to cart
+
 - `POST /cart`
 - Description: Add a test to the current user's cart
 - Auth: Bearer token
@@ -156,6 +175,7 @@ Common headers:
 - Response: updated cart
 
 ### Remove item from cart
+
 - `DELETE /cart/items/:testId`
 - Description: Remove a test from the cart
 - Auth: Bearer token
@@ -164,12 +184,14 @@ Common headers:
 - Response: updated cart
 
 ### Clear cart
+
 - `DELETE /cart`
 - Description: Remove all items from current cart
 - Auth: Bearer token
 - Response: success message
 
 ### Get user orders
+
 - `GET /orders`
 - Description: Get paginated orders for current user
 - Auth: Bearer token
@@ -179,6 +201,7 @@ Common headers:
 - Response: order list and pagination
 
 ### Get order by ID
+
 - `GET /orders/:id`
 - Description: Get details of a specific order
 - Auth: Bearer token
@@ -187,6 +210,7 @@ Common headers:
 - Response: order object
 
 ### Create order
+
 - `POST /orders`
 - Description: Place an order for the current cart
 - Auth: Bearer token
@@ -195,6 +219,7 @@ Common headers:
 - Response: created order
 
 ### Cancel order
+
 - `PUT /orders/:id/cancel`
 - Description: Cancel a pending unpaid order
 - Auth: Bearer token
@@ -203,6 +228,7 @@ Common headers:
 - Response: cancelled order
 
 ### Mark order as paid
+
 - `PUT /orders/:id/pay`
 - Description: Mark order as paid and complete it
 - Auth: Bearer token
@@ -215,6 +241,7 @@ Common headers:
 ## Admin Endpoints
 
 ### Create category
+
 - `POST /categories`
 - Description: Create a new category
 - Auth: Bearer token
@@ -224,6 +251,7 @@ Common headers:
 - Response: created category
 
 ### Update category
+
 - `PUT /categories/:id`
 - Description: Update category data
 - Auth: Bearer token
@@ -235,6 +263,7 @@ Common headers:
 - Response: updated category
 
 ### Delete category
+
 - `DELETE /categories/:id`
 - Description: Delete a category if no tests exist in it
 - Auth: Bearer token
@@ -244,6 +273,7 @@ Common headers:
 - Response: success message
 
 ### Create test
+
 - `POST /tests`
 - Description: Create a new test
 - Auth: Bearer token
@@ -259,6 +289,7 @@ Common headers:
 - Response: created test
 
 ### Update test
+
 - `PUT /tests/:id`
 - Description: Update test data
 - Auth: Bearer token
@@ -276,6 +307,7 @@ Common headers:
 - Response: updated test
 
 ### Delete test
+
 - `DELETE /tests/:id`
 - Description: Delete a test
 - Auth: Bearer token
@@ -287,6 +319,7 @@ Common headers:
 ---
 
 ## Notes
+
 - All authenticated endpoints require `Authorization: Bearer {{token}}`.
 - Current cart and order flow is user-only; guest carts are disabled.
 - If the frontend wants to use pagination for orders, pass `page` and `limit` query parameters to `GET /orders`.
