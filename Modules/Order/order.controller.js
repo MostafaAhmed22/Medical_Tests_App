@@ -6,9 +6,9 @@ import { cartModel } from "../../Database/Models/cart.model.js";
 import { userModel } from "../../Database/Models/user.model.js";
 import Stripe from "stripe";
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY)
-  : null;
+// const stripe = process.env.STRIPE_SECRET_KEY
+//   ? new Stripe(process.env.STRIPE_SECRET_KEY)
+//   : null;
 
 const getUserOrders = catchAsync(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
@@ -195,9 +195,58 @@ const cancelOrder = catchAsync(async (req, res, next) => {
   });
 });
 
-// const updatePaidStatus = catchAsync(async (req, res, next) => {
+const updatePaidStatus = catchAsync(async (req, res, next) => {
+  const userId = req.user._id;
+  const orderId = req.params.id;
+  const order = await orderModel.findById(orderId);
+
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  if (order.isPaid) {
+    return next(new AppError("Order is already paid", 400));
+  }
+  // update payment info
+
+  const updatedOrder = await orderModel.findOneAndUpdate(
+    { _id: orderId, status: "Pending" },
+    {
+      $set: {
+        isPaid: true,
+        paidAt: new Date(),
+        status: "Completed",
+      },
+    },
+    {
+      new: true,
+    },
+  );
+
+  if (!updatedOrder) {
+    return next(
+      new AppError("Order must be in Pending status to be paid", 400),
+    );
+  }
+
+  if (updatedOrder.cartId) {
+    await cartModel.findByIdAndDelete(updatedOrder.cartId);
+  }
+  res.status(200).json({
+    message: "order paid status updated",
+    data: updatedOrder,
+  });
+});
+
+
+// const createPaymentIntent = catchAsync(async (req, res, next) => {
 //   const userId = req.user._id;
 //   const orderId = req.params.id;
+
+//   if (!stripe) {
+//     return next(new AppError("Stripe secret key is not configured", 500));
+//   }
+
 //   const order = await orderModel.findById(orderId);
 
 //   if (!order) {
@@ -207,193 +256,144 @@ const cancelOrder = catchAsync(async (req, res, next) => {
 //   if (order.isPaid) {
 //     return next(new AppError("Order is already paid", 400));
 //   }
-//   // update payment info
 
-//   const updatedOrder = await orderModel.findOneAndUpdate(
-//     { _id: orderId, status: "Pending" },
-//     {
-//       $set: {
-//         isPaid: true,
-//         paidAt: new Date(),
-//         status: "Completed",
-//       },
-//     },
-//     {
-//       new: true,
-//     },
-//   );
-
-//   if (!updatedOrder) {
-//     return next(
-//       new AppError("Order must be in Pending status to be paid", 400),
-//     );
+//   if (order.status !== "Pending") {
+//     return next(new AppError("Only pending orders can start payment", 400));
 //   }
 
-//   if (updatedOrder.cartId) {
-//     await cartModel.findByIdAndDelete(updatedOrder.cartId);
-//   }
+//   const amount = Math.round(order.totalOrderPrice * 100);
+
+//   const paymentIntent = await stripe.paymentIntents.create({
+//     amount,
+//     currency: "usd",
+//     payment_method_types: ["card"],
+//     metadata: {
+//       orderId: order._id.toString(),
+//       userId: order.userId.toString(),
+//     },
+//   });
+
 //   res.status(200).json({
-//     message: "order paid status updated",
-//     data: updatedOrder,
+//     status: "success",
+//     clientSecret: paymentIntent.client_secret,
+//     paymentIntentId: paymentIntent.id,
 //   });
 // });
 
+// const stripeWebhook = catchAsync(async (req, res, next) => {
+//   const signature = req.headers["stripe-signature"];
 
-const createPaymentIntent = catchAsync(async (req, res, next) => {
-  const userId = req.user._id;
-  const orderId = req.params.id;
+//   if (!signature) {
+//     return next(new AppError("Missing Stripe signature", 400));
+//   }
 
-  if (!stripe) {
-    return next(new AppError("Stripe secret key is not configured", 500));
-  }
+//   if (!process.env.STRIPE_WEBHOOK_SECRET) {
+//     return next(new AppError("Stripe webhook secret is not configured", 500));
+//   }
 
-  const order = await orderModel.findById(orderId);
+//   if (!stripe) {
+//     return next(new AppError("Stripe secret key is not configured", 500));
+//   }
 
-  if (!order) {
-    return next(new AppError("Order not found", 404));
-  }
+//   const event = stripe.webhooks.constructEvent(
+//     req.body,
+//     signature,
+//     process.env.STRIPE_WEBHOOK_SECRET,
+//   );
 
-  if (order.isPaid) {
-    return next(new AppError("Order is already paid", 400));
-  }
+//   if (event.type === "payment_intent.succeeded") {
+//     const paymentIntent = event.data.object;
+//     const orderId = paymentIntent.metadata?.orderId;
 
-  if (order.status !== "Pending") {
-    return next(new AppError("Only pending orders can start payment", 400));
-  }
+//     if (orderId) {
+//       const order = await orderModel.findById(orderId);
 
-  const amount = Math.round(order.totalOrderPrice * 100);
+//       if (order && !order.isPaid) {
+//         order.isPaid = true;
+//         order.paidAt = new Date();
+//         order.status = "Completed";
+//         await order.save();
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount,
-    currency: "usd",
-    payment_method_types: ["card"],
-    metadata: {
-      orderId: order._id.toString(),
-      userId: order.userId.toString(),
-    },
-  });
+//         if (order.cartId) {
+//           await cartModel.findByIdAndDelete(order.cartId);
+//         }
+//       }
+//     }
+//   }
 
-  res.status(200).json({
-    status: "success",
-    clientSecret: paymentIntent.client_secret,
-    paymentIntentId: paymentIntent.id,
-  });
-});
+//   res.status(200).json({ received: true });
+// });
 
-const stripeWebhook = catchAsync(async (req, res, next) => {
-  const signature = req.headers["stripe-signature"];
+// const confirmPayment = catchAsync(async (req, res, next) => {
+//   const userId = req.user._id;
+//   const orderId = req.params.id;
+//   const { paymentIntentId } = req.body;
 
-  if (!signature) {
-    return next(new AppError("Missing Stripe signature", 400));
-  }
+//   if (!stripe) {
+//     return next(new AppError("Stripe secret key is not configured", 500));
+//   }
 
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    return next(new AppError("Stripe webhook secret is not configured", 500));
-  }
+//   if (!paymentIntentId) {
+//     return next(new AppError("paymentIntentId is required", 400));
+//   }
 
-  if (!stripe) {
-    return next(new AppError("Stripe secret key is not configured", 500));
-  }
+//   const order = await orderModel.findById(orderId);
 
-  const event = stripe.webhooks.constructEvent(
-    req.body,
-    signature,
-    process.env.STRIPE_WEBHOOK_SECRET,
-  );
+//   if (!order) {
+//     return next(new AppError("Order not found", 404));
+//   }
 
-  if (event.type === "payment_intent.succeeded") {
-    const paymentIntent = event.data.object;
-    const orderId = paymentIntent.metadata?.orderId;
+//   if (order.isPaid) {
+//     return next(new AppError("Order is already paid", 400));
+//   }
 
-    if (orderId) {
-      const order = await orderModel.findById(orderId);
+//   if (order.status !== "Pending") {
+//     return next(new AppError("Only pending orders can be confirmed", 400));
+//   }
 
-      if (order && !order.isPaid) {
-        order.isPaid = true;
-        order.paidAt = new Date();
-        order.status = "Completed";
-        await order.save();
+//   const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-        if (order.cartId) {
-          await cartModel.findByIdAndDelete(order.cartId);
-        }
-      }
-    }
-  }
+//   if (paymentIntent.metadata?.orderId !== orderId) {
+//     return next(new AppError("PaymentIntent does not match this order", 400));
+//   }
 
-  res.status(200).json({ received: true });
-});
+//   if (paymentIntent.status !== "succeeded") {
+//     return next(
+//       new AppError(
+//         `Payment not completed. Current status: ${paymentIntent.status}`,
+//         400,
+//       ),
+//     );
+//   }
 
-const confirmPayment = catchAsync(async (req, res, next) => {
-  const userId = req.user._id;
-  const orderId = req.params.id;
-  const { paymentIntentId } = req.body;
+//   order.isPaid = true;
+//   order.paidAt = new Date();
+//   order.status = "Completed";
+//   await order.save();
 
-  if (!stripe) {
-    return next(new AppError("Stripe secret key is not configured", 500));
-  }
+//   if (order.cartId) {
+//     await cartModel.findByIdAndDelete(order.cartId);
+//   }
 
-  if (!paymentIntentId) {
-    return next(new AppError("paymentIntentId is required", 400));
-  }
-
-  const order = await orderModel.findById(orderId);
-
-  if (!order) {
-    return next(new AppError("Order not found", 404));
-  }
-
-  if (order.isPaid) {
-    return next(new AppError("Order is already paid", 400));
-  }
-
-  if (order.status !== "Pending") {
-    return next(new AppError("Only pending orders can be confirmed", 400));
-  }
-
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-  if (paymentIntent.metadata?.orderId !== orderId) {
-    return next(new AppError("PaymentIntent does not match this order", 400));
-  }
-
-  if (paymentIntent.status !== "succeeded") {
-    return next(
-      new AppError(
-        `Payment not completed. Current status: ${paymentIntent.status}`,
-        400,
-      ),
-    );
-  }
-
-  order.isPaid = true;
-  order.paidAt = new Date();
-  order.status = "Completed";
-  await order.save();
-
-  if (order.cartId) {
-    await cartModel.findByIdAndDelete(order.cartId);
-  }
-
-  res.status(200).json({
-    status: "success",
-    message: "Payment confirmed successfully",
-    data: {
-      orderId: order._id,
-      isPaid: order.isPaid,
-      status: order.status,
-      paidAt: order.paidAt,
-    },
-  });
-});
+//   res.status(200).json({
+//     status: "success",
+//     message: "Payment confirmed successfully",
+//     data: {
+//       orderId: order._id,
+//       isPaid: order.isPaid,
+//       status: order.status,
+//       paidAt: order.paidAt,
+//     },
+//   });
+// });
 
 export {
   addOrder,
   getUserOrders,
   getOrderById,
   cancelOrder,
-  // updatePaidStatus,
-  createPaymentIntent,
-  confirmPayment,
-  stripeWebhook
+  updatePaidStatus,
+  // createPaymentIntent,
+  // confirmPayment,
+  // stripeWebhook
 };

@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../Utils/Email/sendEmail.js";
 import { redisClient } from "../../Database/redisConnection.js";
-import { mergeGuestCart } from "../Cart/cart.controller.js";
+// import { mergeGuestCart } from "../Cart/cart.controller.js";
 // import { OAuth2Client } from "google-auth-library";
 
 // const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -53,10 +53,10 @@ const login = catchAsync(async (req, res, next) => {
     });
 
     // Merge guest cart if sessionId provided
-    const sessionId = req.body.sessionId || req.headers["x-session-id"];
-    if (sessionId) {
-      await mergeGuestCart(foundUser._id, sessionId);
-    }
+    // const sessionId = req.body.sessionId || req.headers["x-session-id"];
+    // if (sessionId) {
+    //   await mergeGuestCart(foundUser._id, sessionId);
+    // }
 
     res.json({ success: true, data: token });
   } else {
@@ -158,7 +158,6 @@ const resendVerification = catchAsync(async (req, res, next) => {
   });
 });
 
-
 const forgotPassword = catchAsync(async (req, res, next) => {
   const { email } = req.body;
   if (!email) return next(new AppError("Need Valid Email.", 400));
@@ -223,8 +222,7 @@ const changePassword = catchAsync(async (req, res, next) => {
 });
 
 const getProfile = catchAsync(async (req, res, next) => {
-  const user = await userModel
-    .findById(req.user._id);
+  const user = await userModel.findById(req.user._id);
 
   // .populate("wishlist", "name price images");
 
@@ -356,7 +354,7 @@ const updateProfile = catchAsync(async (req, res, next) => {
 //     maxAge: 7 * 24 * 60 * 60 * 1000,
 //   });
 
-  // Merge guest cart if sessionId provided
+// Merge guest cart if sessionId provided
 //   const sessionId = req.body.sessionId || req.headers["x-session-id"];
 //   if (sessionId) {
 //     await mergeGuestCart(user._id, sessionId);

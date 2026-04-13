@@ -24,7 +24,8 @@ const cartSchema = new Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: null, // null for guest carts
+      // default: null, // null for guest carts - DISABLED
+      required: true, // Now required since guests disabled
     },
     sessionId: {
       type: String,
@@ -45,10 +46,10 @@ const cartSchema = new Schema(
 );
 
 
-// each user can have only one active cart, and each session can have only one active cart (for guests)
+// each user can have only one active cart
 // they can have multiple carts if they are deleted (soft delete) -- this allows for cart history and recovery if needed
 
-// Ensure one active cart per user or session (sparse index to allow null values)
+// Ensure one active cart per user (sparse index to allow null values) - GUESTS DISABLED
 cartSchema.index(
   { userId: 1, isDeleted: 1 }, // Acs order (i can remove it)
   {
@@ -60,15 +61,15 @@ cartSchema.index(
   },
 );
 
-cartSchema.index(
-  { sessionId: 1, isDeleted: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      sessionId: { $ne: null },
-      isDeleted: false,
-    },
-  },
-);
+// cartSchema.index(
+//   { sessionId: 1, isDeleted: 1 },
+//   {
+//     unique: true,
+//     partialFilterExpression: {
+//       sessionId: { $ne: null },
+//       isDeleted: false,
+//     },
+//   },
+// );
 
 export const cartModel = mongoose.model("Cart", cartSchema);

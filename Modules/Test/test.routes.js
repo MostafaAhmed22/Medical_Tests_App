@@ -5,8 +5,8 @@ import {
   getTest,
   updateTest,
   deleteTest,
-  getAuthorizedTestQuestions,
-  submitTest,
+  // getAuthorizedTestQuestions,
+  // submitTest,
 } from "./test.controller.js";
 import { verifyToken } from "../../Middlewares/verifyToken.js";
 import { isAdmin } from "../../Middlewares/isAdmin.js";
@@ -15,7 +15,7 @@ import {
   createTestValidation,
   getTestValidation,
   updateTestValidation,
-  submitTestValidation,
+  // submitTestValidation,
 } from "../../Validations/testValidation.js";
 
 import { uploadSingleImage } from "../../Utils/Cloudinary/multer.js";
@@ -27,19 +27,19 @@ testRoutes.get("/tests", getAllTests);
 testRoutes.get("/tests/:id", validate(getTestValidation), getTest);
 
 // User routes (authenticated)
-testRoutes.get(
-  "/tests/:id/questions",
-  verifyToken,
-  validate(getTestValidation),
-  getAuthorizedTestQuestions,
-);
+// testRoutes.get(
+//   "/tests/:id/questions",
+//   verifyToken,
+//   validate(getTestValidation),
+//   getAuthorizedTestQuestions,
+// );
 
-testRoutes.post(
-  "/tests/:id/submit",
-  verifyToken,
-  validate(submitTestValidation),
-  submitTest,
-);
+// testRoutes.post(
+//   "/tests/:id/submit",
+//   verifyToken,
+//   validate(submitTestValidation),
+//   submitTest,
+// );
 
 // Admin only routes
 testRoutes.post(

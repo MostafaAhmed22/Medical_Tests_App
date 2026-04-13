@@ -123,103 +123,103 @@ export const deleteTest = catchAsync(async (req, res, next) => {
 });
 
 // Get authorized test questions (only for paid users)
-export const getAuthorizedTestQuestions = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const userId = req.user._id;
+// export const getAuthorizedTestQuestions = catchAsync(async (req, res, next) => {
+//   const { id } = req.params;
+//   const userId = req.user._id;
 
-  // 1. Check if user has paid for this test
-  const order = await orderModel.findOne({
-    userId,
-    isPaid: true,
-    status: "Completed",
-    "orderItems.testId": id,
-  });
+//   // 1. Check if user has paid for this test
+//   const order = await orderModel.findOne({
+//     userId,
+//     isPaid: true,
+//     status: "Completed",
+//     "orderItems.testId": id,
+//   });
 
-  if (!order) {
-    return next(
-      new AppError("You must purchase this test before taking it", 403),
-    );
-  }
+//   if (!order) {
+//     return next(
+//       new AppError("You must purchase this test before taking it", 403),
+//     );
+//   }
 
-  // 2. Return questions with options (no points shown to prevent cheating if needed, but here we'll include)
-  const test = await testModel.findById(id).select("questions title instructions totalQuestions");
-  if (!test) return next(new AppError("Test not found", 404));
+//   // 2. Return questions with options (no points shown to prevent cheating if needed, but here we'll include)
+//   const test = await testModel.findById(id).select("questions title instructions totalQuestions");
+//   if (!test) return next(new AppError("Test not found", 404));
 
-  res.status(200).json({
-    status: "success",
-    data: test,
-  });
-});
+//   res.status(200).json({
+//     status: "success",
+//     data: test,
+//   });
+// });
 
-// Submit test answers and get score + interpretation
-export const submitTest = catchAsync(async (req, res, next) => {
-  const { id } = req.params; // testId
-  const { answers } = req.body; // Array of { questionId, selectedOptionIndex }
-  const userId = req.user._id;
+// // Submit test answers and get score + interpretation
+// export const submitTest = catchAsync(async (req, res, next) => {
+//   const { id } = req.params; // testId
+//   const { answers } = req.body; // Array of { questionId, selectedOptionIndex }
+//   const userId = req.user._id;
 
-  // 1. Verify purchase again
-  const order = await orderModel.findOne({
-    userId,
-    isPaid: true,
-    status: "Completed",
-    "orderItems.testId": id,
-  });
+//   // 1. Verify purchase again
+//   const order = await orderModel.findOne({
+//     userId,
+//     isPaid: true,
+//     status: "Completed",
+//     "orderItems.testId": id,
+//   });
 
-  if (!order) {
-    return next(new AppError("Unauthorized test submission", 403));
-  }
+//   if (!order) {
+//     return next(new AppError("Unauthorized test submission", 403));
+//   }
 
-  const test = await testModel.findById(id);
-  if (!test) return next(new AppError("Test not found", 404));
+//   const test = await testModel.findById(id);
+//   if (!test) return next(new AppError("Test not found", 404));
 
-  // 2. Calculate score
-  let totalScore = 0;
-  const processedAnswers = [];
+//   // 2. Calculate score
+//   let totalScore = 0;
+//   const processedAnswers = [];
 
-  for (const answer of answers) {
-    const question = test.questions.id(answer.questionId);
-    if (!question) continue;
+//   for (const answer of answers) {
+//     const question = test.questions.id(answer.questionId);
+//     if (!question) continue;
 
-    const selectedOption = question.options[answer.selectedOptionIndex];
-    if (!selectedOption) continue;
+//     const selectedOption = question.options[answer.selectedOptionIndex];
+//     if (!selectedOption) continue;
 
-    totalScore += selectedOption.points;
-    processedAnswers.push({
-      questionId: answer.questionId,
-      selectedOptionIndex: answer.selectedOptionIndex,
-      pointsEarned: selectedOption.points,
-    });
-  }
+//     totalScore += selectedOption.points;
+//     processedAnswers.push({
+//       questionId: answer.questionId,
+//       selectedOptionIndex: answer.selectedOptionIndex,
+//       pointsEarned: selectedOption.points,
+//     });
+//   }
 
-  // 3. Find matching interpretation
-  const interpretation = test.interpretations.find(
-    (inter) => totalScore >= inter.minScore && totalScore <= inter.maxScore,
-  );
+//   // 3. Find matching interpretation
+//   const interpretation = test.interpretations.find(
+//     (inter) => totalScore >= inter.minScore && totalScore <= inter.maxScore,
+//   );
 
-  if (!interpretation) {
-    return next(
-      new AppError("No interpretation found for your score.", 500),
-    );
-  }
+//   if (!interpretation) {
+//     return next(
+//       new AppError("No interpretation found for your score.", 500),
+//     );
+//   }
 
-  // 4. Save submission
-  const submission = await submissionModel.create({
-    userId,
-    testId: id,
-    answers: processedAnswers,
-    totalScore,
-    interpretation: {
-      label: interpretation.label,
-      description: interpretation.description,
-    },
-  });
+//   // 4. Save submission
+//   const submission = await submissionModel.create({
+//     userId,
+//     testId: id,
+//     answers: processedAnswers,
+//     totalScore,
+//     interpretation: {
+//       label: interpretation.label,
+//       description: interpretation.description,
+//     },
+//   });
 
-  res.status(200).json({
-    status: "success",
-    data: {
-      totalScore,
-      interpretation: submission.interpretation,
-      submissionId: submission._id,
-    },
-  });
-});
+//   res.status(200).json({
+//     status: "success",
+//     data: {
+//       totalScore,
+//       interpretation: submission.interpretation,
+//       submissionId: submission._id,
+//     },
+//   });
+// });
